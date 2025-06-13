@@ -36,28 +36,77 @@ type Product struct {
 // Database connection
 var db *sql.DB
 
-// Sample product data - hardcoded in memory
+// Sample product data - hardcoded in memory with Irasutoya images
 var products = []Product{
 	{
 		ID:          1,
 		Name:        "かわいいぬいぐるみ",
 		Price:       2980,
 		Description: "ふわふわで抱き心地抜群のぬいぐるみです。お子様へのプレゼントにも最適！",
-		ImageURL:    "https://via.placeholder.com/300x300/FFB6C1/FFFFFF?text=ぬいぐるみ",
+		ImageURL:    "https://4.bp.blogspot.com/-Kn7_AO8_50M/VrLCy-NK8GI/AAAAAAAA34s/xhYVeQZdYj8/s400/nuigurumi_kuma.png",
 	},
 	{
 		ID:          2,
 		Name:        "おしゃれなマグカップ",
 		Price:       1280,
 		Description: "毎日のコーヒータイムを特別にしてくれる、シンプルで上品なデザインのマグカップ。",
-		ImageURL:    "https://via.placeholder.com/300x300/87CEEB/FFFFFF?text=マグカップ",
+		ImageURL:    "https://1.bp.blogspot.com/-SZLvBxvLn8k/VXgBfz6JjEI/AAAAAAAAuPE/w1Kn6lXPdEY/s400/mug_cup.png",
 	},
 	{
 		ID:          3,
 		Name:        "手作りキャンドル",
 		Price:       1800,
 		Description: "自然な香りでリラックス効果抜群。お部屋の雰囲気を優しく演出します。",
-		ImageURL:    "https://via.placeholder.com/300x300/DDA0DD/FFFFFF?text=キャンドル",
+		ImageURL:    "https://1.bp.blogspot.com/-VgsGrrmGGT0/VeN_IqmzUKI/AAAAAAAAwcg/mBFAZHwX0mI/s400/candle.png",
+	},
+	{
+		ID:          4,
+		Name:        "北欧風クッション",
+		Price:       3200,
+		Description: "お部屋をおしゃれに彩る北欧デザインのクッション。上質な素材で長くご愛用いただけます。",
+		ImageURL:    "https://1.bp.blogspot.com/-h-IeZXJGNNs/VeN_H9AH4BI/AAAAAAAAwcQ/2MrCNVKqHZc/s400/cushion.png",
+	},
+	{
+		ID:          5,
+		Name:        "ハンドメイド石鹸",
+		Price:       680,
+		Description: "天然成分100%の優しいハンドメイド石鹸。お肌に優しく、良い香りが特徴です。",
+		ImageURL:    "https://2.bp.blogspot.com/-K1IfHIhZAO4/WASJbGDkWvI/AAAAAAAA_zY/G5kXOC8bhNs4eLHb9KeKkfIcFGEw9gY0ACLcB/s400/soap.png",
+	},
+	{
+		ID:          6,
+		Name:        "オーガニック紅茶",
+		Price:       1450,
+		Description: "厳選されたオーガニック茶葉を使用した上品な紅茶。リラックスタイムにぴったりです。",
+		ImageURL:    "https://1.bp.blogspot.com/-VaGUUVgPQKI/VFm9nBRtHzI/AAAAAAAApG0/Hzi3lj_7_nE/s400/tea_cup.png",
+	},
+	{
+		ID:          7,
+		Name:        "アロマディフューザー",
+		Price:       4800,
+		Description: "お部屋を良い香りで満たすスタイリッシュなアロマディフューザー。LEDライト付きです。",
+		ImageURL:    "https://1.bp.blogspot.com/-aQwGaQnQqJc/WP_WaUQzqWI/AAAAAAABEWo/HdqmQ_mzKJoB6GfLR7c9Sk9kefaJq2FkACLcB/s400/aroma_oil.png",
+	},
+	{
+		ID:          8,
+		Name:        "天然木コースター",
+		Price:       890,
+		Description: "職人が一つ一つ手作りした天然木のコースターセット。温かみのある仕上がりです。",
+		ImageURL:    "https://1.bp.blogspot.com/-VJ1L6-Q6z3s/WeL1qPCmZTI/AAAAAAABGsI/C0bTa_4a4x4KU8-i_QE67jHx0MDKnhbqgCLcBGAs/s400/mokuzai_plate.png",
+	},
+	{
+		ID:          9,
+		Name:        "ミニ観葉植物",
+		Price:       1650,
+		Description: "お手入れ簡単で初心者にもおすすめの可愛いミニ観葉植物。デスクにぴったりです。",
+		ImageURL:    "https://2.bp.blogspot.com/-ALqjO2pUJ3E/VrYJQ8H4EAI/AAAAAAAA384/5x_3VQ8YlAo/s400/kanyoushokubutsu_pot.png",
+	},
+	{
+		ID:          10,
+		Name:        "オーガニックハンドクリーム",
+		Price:       1280,
+		Description: "乾燥からお肌を守る天然成分のハンドクリーム。さらりとした使い心地が人気です。",
+		ImageURL:    "https://1.bp.blogspot.com/-vG-lxj8d-K8/VFm9s1ZSa8I/AAAAAAAApHI/GwS3XHQZ1TE/s400/hand_cream.png",
 	},
 }
 

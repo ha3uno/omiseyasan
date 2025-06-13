@@ -4,7 +4,7 @@ services:
     env: go
     buildCommand: |
       cd frontend && npm install && npm run build && cd .. &&
-      cd backend && go build -o app main.go && cd ..
+      cd backend && go mod tidy && go build -o app main.go && cd ..
     startCommand: cd backend && ./app
     healthCheckPath: /api/hello
     envVars:

@@ -75,12 +75,18 @@ const HistoryPage: React.FC = () => {
     <div className="history-page">
       <header className="history-header">
         <h1>更新履歴</h1>
+        <p className="database-note">📊 データベースから履歴を取得中</p>
         <Link to="/" className="back-link">← ホームに戻る</Link>
       </header>
 
       <main className="history-content">
-        {loading && <p className="loading">読み込み中...</p>}
-        {error && <p className="error">エラー: {error}</p>}
+        {loading && <p className="loading">データベースから読み込み中...</p>}
+        {error && (
+          <div className="error-container">
+            <p className="error">エラー: {error}</p>
+            <p className="error-hint">データベース接続に問題がある可能性があります。</p>
+          </div>
+        )}
         
         {!loading && !error && (
           <>
@@ -92,7 +98,10 @@ const HistoryPage: React.FC = () => {
             </div>
             
             {historyData.length === 0 ? (
-              <p className="no-data">履歴データがありません。</p>
+              <div className="no-data-container">
+                <p className="no-data">履歴データがありません。</p>
+                <p className="no-data-hint">ホームページから履歴を追加してください。</p>
+              </div>
             ) : (
               <div className="table-container">
                 <table className="history-table">

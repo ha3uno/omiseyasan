@@ -1,18 +1,18 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 )
 
 // HistoryEntry represents a single history record
@@ -33,12 +33,8 @@ type Product struct {
 	ImageURL    string  `json:"imageUrl"`
 }
 
-// In-memory storage for history entries
-var (
-	historyEntries []HistoryEntry
-	historyMutex   sync.RWMutex
-	nextID         int = 1
-)
+// Database connection
+var db *sql.DB
 
 // Sample product data - hardcoded in memory
 var products = []Product{
@@ -66,6 +62,13 @@ var products = []Product{
 }
 
 func main() {
+	// Initialize database connection
+	initDB()
+	defer db.Close()
+
+	// Create tables if they don't exist
+	createTables()
+
 	r := mux.NewRouter()
 
 	// API routes
@@ -124,6 +127,44 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
 
+// initDB initializes the database connection
+func initDB() {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL environment variable is required")
+	}
+
+	var err error
+	db, err = sql.Open("postgres", databaseURL)
+	if err != nil {
+		log.Fatal("Failed to open database:", err)
+	}
+
+	if err = db.Ping(); err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
+
+	log.Println("Successfully connected to PostgreSQL database")
+}
+
+// createTables creates the update_history table if it doesn't exist
+func createTables() {
+	query := `
+	CREATE TABLE IF NOT EXISTS update_history (
+		id SERIAL PRIMARY KEY,
+		timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		description TEXT NOT NULL,
+		effort_hours NUMERIC(5, 2) NOT NULL,
+		claude_prompt TEXT NOT NULL
+	);`
+
+	if _, err := db.Exec(query); err != nil {
+		log.Fatal("Failed to create update_history table:", err)
+	}
+
+	log.Println("Database tables initialized successfully")
+}
+
 func helloHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprint(w, "hello world from Go!")
@@ -131,20 +172,47 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 
 // getHistoryHandler handles GET /api/history - returns all history entries sorted by timestamp descending
 func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	historyMutex.RLock()
-	defer historyMutex.RUnlock()
+	query := `
+		SELECT id, timestamp, description, effort_hours, claude_prompt 
+		FROM update_history 
+		ORDER BY timestamp DESC
+	`
 
-	// Create a copy of the slice to avoid race conditions
-	entriesCopy := make([]HistoryEntry, len(historyEntries))
-	copy(entriesCopy, historyEntries)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Printf("Database query error: %v", err)
+		http.Error(w, "Failed to fetch history data", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
 
-	// Sort by timestamp descending (newest first)
-	sort.Slice(entriesCopy, func(i, j int) bool {
-		return entriesCopy[i].Timestamp > entriesCopy[j].Timestamp
-	})
+	var entries []HistoryEntry
+
+	for rows.Next() {
+		var entry HistoryEntry
+		var timestamp time.Time
+
+		err := rows.Scan(&entry.ID, &timestamp, &entry.Description, &entry.EffortHours, &entry.ClaudePrompt)
+		if err != nil {
+			log.Printf("Database scan error: %v", err)
+			http.Error(w, "Failed to parse history data", http.StatusInternalServerError)
+			return
+		}
+
+		// Format timestamp for frontend compatibility
+		entry.Timestamp = timestamp.Format("2006-01-02 15:04:05")
+		entries = append(entries, entry)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Database rows error: %v", err)
+		http.Error(w, "Failed to fetch history data", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(entriesCopy); err != nil {
+	if err := json.NewEncoder(w).Encode(entries); err != nil {
+		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode history data", http.StatusInternalServerError)
 		return
 	}
@@ -159,6 +227,7 @@ func createHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&newEntry); err != nil {
+		log.Printf("JSON decode error: %v", err)
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
@@ -169,26 +238,34 @@ func createHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	historyMutex.Lock()
-	defer historyMutex.Unlock()
+	// Insert new entry into database
+	query := `
+		INSERT INTO update_history (description, effort_hours, claude_prompt) 
+		VALUES ($1, $2, $3) 
+		RETURNING id, timestamp, description, effort_hours, claude_prompt
+	`
 
-	// Create new history entry with generated ID and timestamp
-	entry := HistoryEntry{
-		ID:           nextID,
-		Timestamp:    time.Now().Format("2006-01-02 15:04:05"),
-		Description:  newEntry.Description,
-		EffortHours:  newEntry.EffortHours,
-		ClaudePrompt: newEntry.ClaudePrompt,
+	var entry HistoryEntry
+	var timestamp time.Time
+
+	err := db.QueryRow(query, newEntry.Description, newEntry.EffortHours, newEntry.ClaudePrompt).Scan(
+		&entry.ID, &timestamp, &entry.Description, &entry.EffortHours, &entry.ClaudePrompt,
+	)
+
+	if err != nil {
+		log.Printf("Database insert error: %v", err)
+		http.Error(w, "Failed to create history entry", http.StatusInternalServerError)
+		return
 	}
-	nextID++
 
-	// Add to history
-	historyEntries = append(historyEntries, entry)
+	// Format timestamp for frontend compatibility
+	entry.Timestamp = timestamp.Format("2006-01-02 15:04:05")
 
 	// Return the created entry
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(entry); err != nil {
+		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}

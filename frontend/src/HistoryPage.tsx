@@ -14,6 +14,8 @@ const HistoryPage: React.FC = () => {
   const [historyData, setHistoryData] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  // State to track which prompts are expanded (by entry ID)
+  const [expandedPrompts, setExpandedPrompts] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchHistory();
@@ -36,37 +38,62 @@ const HistoryPage: React.FC = () => {
     }
   };
 
-  const formatPrompt = (prompt: string) => {
+  // Toggle expanded state for a specific entry
+  const togglePromptExpansion = (entryId: number) => {
+    setExpandedPrompts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(entryId)) {
+        newSet.delete(entryId);
+      } else {
+        newSet.add(entryId);
+      }
+      return newSet;
+    });
+  };
+
+  // Check if prompt should be truncated (more than 3 lines or 150 characters)
+  const shouldTruncatePrompt = (prompt: string) => {
+    if (!prompt) return false;
+    const lines = prompt.split('\n');
+    return lines.length > 3 || prompt.length > 150;
+  };
+
+  // Get truncated version of the prompt
+  const getTruncatedPrompt = (prompt: string) => {
     if (!prompt) return '';
-    
-    // Split by lines and format as list if it contains bullet points or numbered items
-    const lines = prompt.split('\n').filter(line => line.trim());
-    
-    // Check if it looks like a list (starts with -, *, numbers, etc.)
-    const isListLike = lines.some(line => 
-      /^\s*[-*•]\s/.test(line) || /^\s*\d+\.\s/.test(line)
-    );
-
-    if (isListLike) {
-      return (
-        <ul className="prompt-list">
-          {lines.map((line, index) => {
-            const cleanLine = line.replace(/^\s*[-*•]\s*/, '').replace(/^\s*\d+\.\s*/, '');
-            return <li key={index}>{cleanLine}</li>;
-          })}
-        </ul>
-      );
+    const lines = prompt.split('\n');
+    if (lines.length > 3) {
+      return lines.slice(0, 3).join('\n') + '...';
     }
+    if (prompt.length > 150) {
+      return prompt.substring(0, 150) + '...';
+    }
+    return prompt;
+  };
 
-    // Otherwise, just preserve line breaks
+  // Format prompt with collapsible functionality
+  const formatPrompt = (entry: HistoryEntry) => {
+    const { id, claudePrompt } = entry;
+    if (!claudePrompt) return '';
+
+    const isExpanded = expandedPrompts.has(id);
+    const shouldTruncate = shouldTruncatePrompt(claudePrompt);
+    const displayText = isExpanded || !shouldTruncate ? claudePrompt : getTruncatedPrompt(claudePrompt);
+
     return (
-      <div className="prompt-text">
-        {lines.map((line, index) => (
-          <React.Fragment key={index}>
-            {line}
-            {index < lines.length - 1 && <br />}
-          </React.Fragment>
-        ))}
+      <div className="prompt-container">
+        <div className={`prompt-text ${isExpanded ? 'expanded' : 'collapsed'}`}>
+          {displayText}
+        </div>
+        {shouldTruncate && (
+          <button
+            className="prompt-toggle-button"
+            onClick={() => togglePromptExpansion(id)}
+            type="button"
+          >
+            {isExpanded ? '閉じる' : 'もっと見る'}
+          </button>
+        )}
       </div>
     );
   };
@@ -120,7 +147,7 @@ const HistoryPage: React.FC = () => {
                         <td className="description-cell">{entry.description}</td>
                         <td className="effort-cell">{entry.effortHours}</td>
                         <td className="prompt-cell">
-                          {formatPrompt(entry.claudePrompt)}
+                          {formatPrompt(entry)}
                         </td>
                       </tr>
                     ))}

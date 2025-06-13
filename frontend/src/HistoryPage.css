@@ -180,6 +180,54 @@
   word-wrap: break-word;
 }
 
+/* Collapsible prompt container styles */
+.prompt-container {
+  position: relative;
+}
+
+.prompt-text {
+  line-height: 1.4;
+  white-space: pre-wrap; /* Preserve line breaks and whitespace */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.prompt-text.collapsed {
+  overflow: hidden;
+  position: relative;
+}
+
+.prompt-text.expanded {
+  white-space: pre-wrap;
+}
+
+.prompt-toggle-button {
+  background: none;
+  border: none;
+  color: #374151;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  text-decoration: underline;
+  margin-top: 4px;
+}
+
+.prompt-toggle-button:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.prompt-toggle-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(55, 65, 81, 0.1);
+}
+
+/* Legacy styles for backward compatibility */
 .prompt-list {
   margin: 0;
   padding-left: 20px;
@@ -187,10 +235,6 @@
 
 .prompt-list li {
   margin-bottom: 5px;
-  line-height: 1.4;
-}
-
-.prompt-text {
   line-height: 1.4;
 }
 

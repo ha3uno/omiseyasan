@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: fullstack-demo-app
+    env: go
+    buildCommand: |
+      cd frontend && npm install && npm run build && cd .. &&
+      cd backend && go build -o app main.go && cd ..
+    startCommand: cd backend && ./app
+    healthCheckPath: /api/hello
+    envVars:
+      - key: PORT
+        value: 10000
+    plan: free

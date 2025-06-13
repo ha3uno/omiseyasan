@@ -7,6 +7,7 @@
   padding: 20px;
   color: white;
   margin-bottom: 20px;
+  position: relative;
 }
 
 .App-header h1 {
@@ -16,6 +17,24 @@
 .App-header p {
   margin: 0;
   opacity: 0.8;
+}
+
+.history-link {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: #61dafb;
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid #61dafb;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.history-link:hover {
+  background-color: #61dafb;
+  color: #282c34;
 }
 
 .message-container {
@@ -60,4 +79,119 @@ button:hover:not(:disabled) {
 button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+/* History Form Styles */
+.history-form-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 30px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  text-align: left;
+}
+
+.history-form-container h2 {
+  margin-top: 0;
+  margin-bottom: 25px;
+  color: #333;
+  text-align: center;
+}
+
+.history-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #555;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-error {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.form-success {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.submit-button {
+  background-color: #28a745;
+  margin-top: 10px;
+  align-self: flex-start;
+  min-width: 120px;
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.submit-button:disabled {
+  background-color: #6c757d;
+}
+
+/* Responsive design for history form */
+@media (max-width: 768px) {
+  .App-header {
+    padding: 15px;
+  }
+  
+  .history-link {
+    position: static;
+    margin-top: 15px;
+    display: inline-block;
+  }
+  
+  .history-form-container {
+    margin: 20px 10px;
+    padding: 20px;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    padding: 10px;
+  }
 }

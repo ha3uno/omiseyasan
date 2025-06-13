@@ -1,3 +1,4 @@
-# demo_app
+# ローカル起動手順
 
-hogefuga
+cd frontend && npm install && npm start - React開発サーバー起動
+  1. cd backend && go run main.go - Goサーバー起動

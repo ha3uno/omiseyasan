@@ -24,12 +24,46 @@ type HistoryEntry struct {
 	ClaudePrompt string `json:"claudePrompt"`
 }
 
+// Product represents a product in the e-commerce site
+type Product struct {
+	ID          int     `json:"id"`
+	Name        string  `json:"name"`
+	Price       float64 `json:"price"`
+	Description string  `json:"description"`
+	ImageURL    string  `json:"imageUrl"`
+}
+
 // In-memory storage for history entries
 var (
 	historyEntries []HistoryEntry
 	historyMutex   sync.RWMutex
 	nextID         int = 1
 )
+
+// Sample product data - hardcoded in memory
+var products = []Product{
+	{
+		ID:          1,
+		Name:        "かわいいぬいぐるみ",
+		Price:       2980,
+		Description: "ふわふわで抱き心地抜群のぬいぐるみです。お子様へのプレゼントにも最適！",
+		ImageURL:    "https://via.placeholder.com/300x300/FFB6C1/FFFFFF?text=ぬいぐるみ",
+	},
+	{
+		ID:          2,
+		Name:        "おしゃれなマグカップ",
+		Price:       1280,
+		Description: "毎日のコーヒータイムを特別にしてくれる、シンプルで上品なデザインのマグカップ。",
+		ImageURL:    "https://via.placeholder.com/300x300/87CEEB/FFFFFF?text=マグカップ",
+	},
+	{
+		ID:          3,
+		Name:        "手作りキャンドル",
+		Price:       1800,
+		Description: "自然な香りでリラックス効果抜群。お部屋の雰囲気を優しく演出します。",
+		ImageURL:    "https://via.placeholder.com/300x300/DDA0DD/FFFFFF?text=キャンドル",
+	},
+}
 
 func main() {
 	r := mux.NewRouter()
@@ -39,6 +73,7 @@ func main() {
 	api.HandleFunc("/hello", helloHandler).Methods("GET")
 	api.HandleFunc("/history", getHistoryHandler).Methods("GET")
 	api.HandleFunc("/history", createHistoryHandler).Methods("POST")
+	api.HandleFunc("/products", getProductsHandler).Methods("GET")
 
 	// Serve static files from frontend/build directory
 	staticDir := "../frontend/build"
@@ -80,7 +115,10 @@ func main() {
 	}
 
 	fmt.Printf("Server starting on port %s...\n", port)
-	fmt.Printf("API endpoint: http://localhost:%s/api/hello\n", port)
+	fmt.Printf("API endpoints:\n")
+	fmt.Printf("  - http://localhost:%s/api/hello\n", port)
+	fmt.Printf("  - http://localhost:%s/api/products\n", port)
+	fmt.Printf("  - http://localhost:%s/api/history\n", port)
 	fmt.Printf("Frontend: http://localhost:%s/\n", port)
 	
 	log.Fatal(http.ListenAndServe(":"+port, r))
@@ -152,6 +190,15 @@ func createHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(entry); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// getProductsHandler handles GET /api/products - returns all products
+func getProductsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(products); err != nil {
+		http.Error(w, "Failed to encode products data", http.StatusInternalServerError)
 		return
 	}
 }

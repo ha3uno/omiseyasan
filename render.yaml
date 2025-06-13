@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: fullstack-demo-app
+    name: omiseyasan
     env: go
     buildCommand: |
       cd frontend && npm install && npm run build && cd .. &&

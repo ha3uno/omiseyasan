@@ -11,6 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
@@ -158,7 +161,10 @@ func main() {
 	initDB()
 	defer db.Close()
 
-	// Create tables if they don't exist
+	// Run database migrations
+	runMigrations()
+
+	// Create tables if they don't exist (fallback for existing code)
 	createTables()
 
 	r := mux.NewRouter()
@@ -390,7 +396,43 @@ func initDB() {
 	log.Println("Successfully connected to PostgreSQL database")
 }
 
-// createTables creates the update_history table if it doesn't exist
+// runMigrations runs database migrations using golang-migrate
+func runMigrations() {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL environment variable is required for migrations")
+	}
+
+	// Create postgres driver instance
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		log.Fatal("Failed to create postgres driver for migrations:", err)
+	}
+
+	// Create migrate instance with file source
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://../migrations", // Source: migrations directory relative to backend directory
+		"postgres", // Database name
+		driver,     // Database driver instance
+	)
+	if err != nil {
+		log.Fatal("Failed to create migrate instance:", err)
+	}
+
+	// Run up migrations
+	err = m.Up()
+	if err != nil {
+		if err == migrate.ErrNoChange {
+			log.Println("Database schema is up to date")
+		} else {
+			log.Fatal("Failed to run migrations:", err)
+		}
+	} else {
+		log.Println("Database migrations applied successfully")
+	}
+}
+
+// createTables creates the update_history table if it doesn't exist (fallback)
 func createTables() {
 	query := `
 	CREATE TABLE IF NOT EXISTS update_history (

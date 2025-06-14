@@ -33,8 +33,21 @@ type Product struct {
 	ImageURL    string  `json:"imageUrl"`
 }
 
+// User represents a user account
+type User struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Address     string `json:"address"`
+	PhoneNumber string `json:"phoneNumber"`
+	Email       string `json:"email"`
+}
+
 // Database connection
 var db *sql.DB
+
+// In-memory user storage
+var users = []User{}
+var nextUserID = 1
 
 // Sample product data - hardcoded in memory with Picsum Photos images
 var products = []Product{
@@ -126,6 +139,8 @@ func main() {
 	api.HandleFunc("/history", getHistoryHandler).Methods("GET")
 	api.HandleFunc("/history", createHistoryHandler).Methods("POST")
 	api.HandleFunc("/products", getProductsHandler).Methods("GET")
+	api.HandleFunc("/products/{id}", getProductByIDHandler).Methods("GET")
+	api.HandleFunc("/users/register", registerUserHandler).Methods("POST")
 
 	// Serve static files from frontend/build directory
 	staticDir := "../frontend/build"
@@ -174,6 +189,85 @@ func main() {
 	fmt.Printf("Frontend: http://localhost:%s/\n", port)
 	
 	log.Fatal(http.ListenAndServe(":"+port, r))
+}
+
+// getProductByIDHandler handles GET /api/products/:id - returns a specific product
+func getProductByIDHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	productID := vars["id"]
+	
+	// Convert string ID to int
+	id := 0
+	for i, char := range productID {
+		if char < '0' || char > '9' {
+			http.Error(w, "Invalid product ID", http.StatusBadRequest)
+			return
+		}
+		id = id*10 + int(char-'0')
+		if i > 10 { // Prevent overflow
+			http.Error(w, "Invalid product ID", http.StatusBadRequest)
+			return
+		}
+	}
+	
+	// Find product by ID
+	for _, product := range products {
+		if product.ID == id {
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(product); err != nil {
+				http.Error(w, "Failed to encode product data", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+	}
+	
+	// Product not found
+	http.Error(w, "Product not found", http.StatusNotFound)
+}
+
+// registerUserHandler handles POST /api/users/register - creates a new user account
+func registerUserHandler(w http.ResponseWriter, r *http.Request) {
+	var newUser struct {
+		Name        string `json:"name"`
+		Address     string `json:"address"`
+		PhoneNumber string `json:"phoneNumber"`
+		Email       string `json:"email"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&newUser); err != nil {
+		log.Printf("JSON decode error: %v", err)
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+	
+	// Validate required fields
+	if newUser.Name == "" || newUser.Email == "" {
+		http.Error(w, "Name and email are required", http.StatusBadRequest)
+		return
+	}
+	
+	// Create new user with unique ID
+	user := User{
+		ID:          nextUserID,
+		Name:        newUser.Name,
+		Address:     newUser.Address,
+		PhoneNumber: newUser.PhoneNumber,
+		Email:       newUser.Email,
+	}
+	
+	// Add to users slice and increment ID counter
+	users = append(users, user)
+	nextUserID++
+	
+	// Return the created user
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		log.Printf("JSON encoding error: %v", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // initDB initializes the database connection

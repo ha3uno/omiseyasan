@@ -7,6 +7,8 @@ import HistoryPage from './HistoryPage';
 import ProductDetailPage from './ProductDetailPage';
 import UserRegisterPage from './UserRegisterPage';
 import CartPage from './CartPage';
+import OrderConfirmationPage from './OrderConfirmationPage';
+import PaymentCompletePage from './PaymentCompletePage';
 import { CartProvider } from './CartContext';
 
 const root = ReactDOM.createRoot(
@@ -22,6 +24,8 @@ root.render(
           <Route path="/products/:id" element={<ProductDetailPage />} />
           <Route path="/register" element={<UserRegisterPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/order" element={<OrderConfirmationPage />} />
+          <Route path="/payment-complete" element={<PaymentCompletePage />} />
         </Routes>
       </Router>
     </CartProvider>

@@ -42,12 +42,41 @@ type User struct {
 	Email       string `json:"email"`
 }
 
+// OrderItem represents an item in an order
+type OrderItem struct {
+	ProductID int     `json:"productId"`
+	Name      string  `json:"name"`
+	Price     float64 `json:"price"`
+	Quantity  int     `json:"quantity"`
+	Subtotal  float64 `json:"subtotal"`
+}
+
+// ShippingInfo represents shipping information
+type ShippingInfo struct {
+	Name        string `json:"name"`
+	Address     string `json:"address"`
+	PhoneNumber string `json:"phoneNumber"`
+}
+
+// Order represents a customer order
+type Order struct {
+	ID           int           `json:"id"`
+	Timestamp    string        `json:"timestamp"`
+	Items        []OrderItem   `json:"items"`
+	TotalAmount  float64       `json:"totalAmount"`
+	ShippingInfo ShippingInfo  `json:"shippingInfo"`
+}
+
 // Database connection
 var db *sql.DB
 
 // In-memory user storage
 var users = []User{}
 var nextUserID = 1
+
+// In-memory order storage
+var orders = []Order{}
+var nextOrderID = 1
 
 // Sample product data - hardcoded in memory with Picsum Photos images
 var products = []Product{
@@ -141,6 +170,7 @@ func main() {
 	api.HandleFunc("/products", getProductsHandler).Methods("GET")
 	api.HandleFunc("/products/{id}", getProductByIDHandler).Methods("GET")
 	api.HandleFunc("/users/register", registerUserHandler).Methods("POST")
+	api.HandleFunc("/orders", createOrderHandler).Methods("POST")
 
 	// Serve static files from frontend/build directory
 	staticDir := "../frontend/build"
@@ -419,6 +449,64 @@ func getProductsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(products); err != nil {
 		http.Error(w, "Failed to encode products data", http.StatusInternalServerError)
+		return
+	}
+}
+
+// createOrderHandler handles POST /api/orders - creates a new order
+func createOrderHandler(w http.ResponseWriter, r *http.Request) {
+	var newOrder struct {
+		Items        []OrderItem   `json:"items"`
+		TotalAmount  float64       `json:"totalAmount"`
+		ShippingInfo ShippingInfo  `json:"shippingInfo"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&newOrder); err != nil {
+		log.Printf("JSON decode error: %v", err)
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+	
+	// Validate required fields
+	if len(newOrder.Items) == 0 {
+		http.Error(w, "Order must contain at least one item", http.StatusBadRequest)
+		return
+	}
+	
+	if newOrder.ShippingInfo.Name == "" || newOrder.ShippingInfo.Address == "" {
+		http.Error(w, "Shipping name and address are required", http.StatusBadRequest)
+		return
+	}
+	
+	// Calculate total amount from items to prevent manipulation
+	calculatedTotal := 0.0
+	for i := range newOrder.Items {
+		item := &newOrder.Items[i]
+		item.Subtotal = item.Price * float64(item.Quantity)
+		calculatedTotal += item.Subtotal
+	}
+	
+	// Create new order with unique ID and timestamp
+	order := Order{
+		ID:           nextOrderID,
+		Timestamp:    time.Now().Format("2006-01-02 15:04:05"),
+		Items:        newOrder.Items,
+		TotalAmount:  calculatedTotal,
+		ShippingInfo: newOrder.ShippingInfo,
+	}
+	
+	// Add to orders slice and increment ID counter
+	orders = append(orders, order)
+	nextOrderID++
+	
+	log.Printf("New order created: ID=%d, Total=%.2f, Items=%d", order.ID, order.TotalAmount, len(order.Items))
+	
+	// Return the created order
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(order); err != nil {
+		log.Printf("JSON encoding error: %v", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 }

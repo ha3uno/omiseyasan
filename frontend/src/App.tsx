@@ -131,6 +131,9 @@ function App() {
           <Link to="/cart" className="nav-link">
             🛒 カート ({getTotalQuantity()})
           </Link>
+          <Link to="/order-history" className="nav-link">
+            📋 注文履歴
+          </Link>
           <Link to="/register" className="nav-link">
             👤 アカウント登録
           </Link>
@@ -248,6 +251,44 @@ function App() {
           </details>
         </section>
       </main>
+      
+      <footer className="App-footer">
+        <div className="footer-content">
+          <div className="footer-section">
+            <h4>おみせやさん♪</h4>
+            <p>かわいい商品がいっぱいのオンラインショップ</p>
+          </div>
+          
+          <div className="footer-section">
+            <h4>サービス</h4>
+            <ul>
+              <li><Link to="/">商品一覧</Link></li>
+              <li><Link to="/cart">ショッピングカート</Link></li>
+              <li><Link to="/order-history">注文履歴</Link></li>
+            </ul>
+          </div>
+          
+          <div className="footer-section">
+            <h4>アカウント</h4>
+            <ul>
+              <li><Link to="/register">アカウント登録</Link></li>
+              <li><Link to="/history">更新履歴</Link></li>
+            </ul>
+          </div>
+          
+          <div className="footer-section">
+            <h4>お問い合わせ</h4>
+            <p>📞 0120-XXX-XXX</p>
+            <p>📧 support@omiseyasan.com</p>
+            <p>営業時間: 平日 9:00〜18:00</p>
+          </div>
+        </div>
+        
+        <div className="footer-bottom">
+          <p>&copy; 2024 おみせやさん♪ All rights reserved.</p>
+          <p className="demo-notice">※ これはデモアプリケーションです</p>
+        </div>
+      </footer>
     </div>
   );
 }

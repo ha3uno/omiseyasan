@@ -171,6 +171,7 @@ func main() {
 	api.HandleFunc("/products/{id}", getProductByIDHandler).Methods("GET")
 	api.HandleFunc("/users/register", registerUserHandler).Methods("POST")
 	api.HandleFunc("/orders", createOrderHandler).Methods("POST")
+	api.HandleFunc("/orders", getOrdersHandler).Methods("GET")
 
 	// Serve static files from frontend/build directory
 	staticDir := "../frontend/build"
@@ -507,6 +508,30 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(order); err != nil {
 		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// getOrdersHandler handles GET /api/orders - returns all orders sorted by timestamp descending
+func getOrdersHandler(w http.ResponseWriter, r *http.Request) {
+	// Create a copy of orders slice for sorting
+	sortedOrders := make([]Order, len(orders))
+	copy(sortedOrders, orders)
+	
+	// Sort orders by timestamp descending (newest first)
+	for i := 0; i < len(sortedOrders)-1; i++ {
+		for j := i + 1; j < len(sortedOrders); j++ {
+			// Compare timestamps (assuming format "2006-01-02 15:04:05")
+			if sortedOrders[i].Timestamp < sortedOrders[j].Timestamp {
+				sortedOrders[i], sortedOrders[j] = sortedOrders[j], sortedOrders[i]
+			}
+		}
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(sortedOrders); err != nil {
+		log.Printf("JSON encoding error: %v", err)
+		http.Error(w, "Failed to encode orders data", http.StatusInternalServerError)
 		return
 	}
 }

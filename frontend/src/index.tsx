@@ -9,6 +9,7 @@ import UserRegisterPage from './UserRegisterPage';
 import CartPage from './CartPage';
 import OrderConfirmationPage from './OrderConfirmationPage';
 import PaymentCompletePage from './PaymentCompletePage';
+import OrderHistoryPage from './OrderHistoryPage';
 import { CartProvider } from './CartContext';
 
 const root = ReactDOM.createRoot(
@@ -26,6 +27,7 @@ root.render(
           <Route path="/cart" element={<CartPage />} />
           <Route path="/order" element={<OrderConfirmationPage />} />
           <Route path="/payment-complete" element={<PaymentCompletePage />} />
+          <Route path="/order-history" element={<OrderHistoryPage />} />
         </Routes>
       </Router>
     </CartProvider>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useCart } from './CartContext';
 import './App.css';
 
 interface Product {
@@ -12,6 +13,7 @@ interface Product {
 
 function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { addToCart, getTotalQuantity } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -45,8 +47,15 @@ function ProductDetailPage() {
   };
 
   const handleAddToCart = () => {
-    // カート機能は未実装
-    alert('カート機能は準備中です！');
+    if (product) {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        imageUrl: product.imageUrl,
+      });
+      alert(`${product.name} をカートに追加しました！`);
+    }
   };
 
   if (loading) {
@@ -56,7 +65,7 @@ function ProductDetailPage() {
           <h1>おみせやさん♪</h1>
           <nav className="header-nav">
             <Link to="/" className="nav-link">🏠 ホーム</Link>
-            <Link to="/cart" className="nav-link">🛒 カートを見る</Link>
+            <Link to="/cart" className="nav-link">🛒 カート ({getTotalQuantity()})</Link>
             <Link to="/register" className="nav-link">👤 アカウント登録</Link>
           </nav>
         </header>
@@ -74,7 +83,7 @@ function ProductDetailPage() {
           <h1>おみせやさん♪</h1>
           <nav className="header-nav">
             <Link to="/" className="nav-link">🏠 ホーム</Link>
-            <Link to="/cart" className="nav-link">🛒 カートを見る</Link>
+            <Link to="/cart" className="nav-link">🛒 カート ({getTotalQuantity()})</Link>
             <Link to="/register" className="nav-link">👤 アカウント登録</Link>
           </nav>
         </header>
@@ -95,7 +104,7 @@ function ProductDetailPage() {
           <h1>おみせやさん♪</h1>
           <nav className="header-nav">
             <Link to="/" className="nav-link">🏠 ホーム</Link>
-            <Link to="/cart" className="nav-link">🛒 カートを見る</Link>
+            <Link to="/cart" className="nav-link">🛒 カート ({getTotalQuantity()})</Link>
             <Link to="/register" className="nav-link">👤 アカウント登録</Link>
           </nav>
         </header>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useCart } from './CartContext';
 import './App.css';
 
 interface Product {
@@ -11,6 +12,7 @@ interface Product {
 }
 
 function App() {
+  const { getTotalQuantity } = useCart();
   const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -127,7 +129,7 @@ function App() {
         <p>かわいい商品がいっぱいのオンラインショップ</p>
         <nav className="header-nav">
           <Link to="/cart" className="nav-link">
-            🛒 カートを見る
+            🛒 カート ({getTotalQuantity()})
           </Link>
           <Link to="/register" className="nav-link">
             👤 アカウント登録

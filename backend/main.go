@@ -48,11 +48,13 @@ type User struct {
 
 // OrderItem represents an item in an order
 type OrderItem struct {
-	ProductID int     `json:"productId"`
-	Name      string  `json:"name"`
-	Price     float64 `json:"price"`
-	Quantity  int     `json:"quantity"`
-	Subtotal  float64 `json:"subtotal"`
+	ID        int     `json:"id" db:"id"`
+	OrderID   int     `json:"orderId" db:"order_id"`
+	ProductID int     `json:"productId" db:"product_id"`
+	Name      string  `json:"name" db:"product_name"`
+	Price     float64 `json:"price" db:"price"`
+	Quantity  int     `json:"quantity" db:"quantity"`
+	Subtotal  float64 `json:"subtotal"` // 計算値なのでdbタグなし
 }
 
 // ShippingInfo represents shipping information
@@ -64,11 +66,13 @@ type ShippingInfo struct {
 
 // Order represents a customer order
 type Order struct {
-	ID           int           `json:"id"`
-	Timestamp    string        `json:"timestamp"`
-	Items        []OrderItem   `json:"items"`
-	TotalAmount  float64       `json:"totalAmount"`
-	ShippingInfo ShippingInfo  `json:"shippingInfo"`
+	ID           int           `json:"id" db:"id"`
+	UserID       *int          `json:"userId,omitempty" db:"user_id"` // Nullable for guest orders
+	Timestamp    string        `json:"timestamp"` // フォーマット済みの文字列
+	OrderedAt    time.Time     `json:"-" db:"ordered_at"` // データベース用のタイムスタンプ
+	Items        []OrderItem   `json:"items"` // JOINで取得
+	TotalAmount  float64       `json:"totalAmount" db:"total_amount"`
+	ShippingInfo ShippingInfo  `json:"shippingInfo"` // 個別のフィールドからマッピング
 }
 
 // Database connection
@@ -78,9 +82,7 @@ var db *sql.DB
 var users = []User{}
 var nextUserID = 1
 
-// In-memory order storage
-var orders = []Order{}
-var nextOrderID = 1
+// Note: Order storage is now handled by PostgreSQL database
 
 // Sample product data - hardcoded in memory with Picsum Photos images
 var products = []Product{
@@ -579,12 +581,13 @@ func getProductsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// createOrderHandler handles POST /api/orders - creates a new order
+// createOrderHandler handles POST /api/orders - creates a new order in database
 func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 	var newOrder struct {
 		Items        []OrderItem   `json:"items"`
 		TotalAmount  float64       `json:"totalAmount"`
 		ShippingInfo ShippingInfo  `json:"shippingInfo"`
+		UserID       *int          `json:"userId,omitempty"` // Optional user ID for logged-in users
 	}
 	
 	if err := json.NewDecoder(r.Body).Decode(&newOrder); err != nil {
@@ -612,20 +615,85 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 		calculatedTotal += item.Subtotal
 	}
 	
-	// Create new order with unique ID and timestamp
+	// Start database transaction for atomic operation
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		http.Error(w, "Failed to create order", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback() // Will be no-op if tx.Commit() succeeds
+	
+	// Insert order into orders table
+	var orderID int
+	var orderedAt time.Time
+	orderQuery := `
+		INSERT INTO orders (user_id, total_amount, shipping_name, shipping_address, shipping_phone_number, shipping_email)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, ordered_at
+	`
+	
+	// Use empty string for shipping_email if not provided (frontend doesn't send email)
+	shippingEmail := ""
+	if newOrder.ShippingInfo.Address != "" {
+		shippingEmail = "customer@example.com" // Placeholder - can be updated later
+	}
+	
+	err = tx.QueryRow(orderQuery, 
+		newOrder.UserID, 
+		calculatedTotal, 
+		newOrder.ShippingInfo.Name, 
+		newOrder.ShippingInfo.Address, 
+		newOrder.ShippingInfo.PhoneNumber, 
+		shippingEmail,
+	).Scan(&orderID, &orderedAt)
+	
+	if err != nil {
+		log.Printf("Failed to insert order: %v", err)
+		http.Error(w, "Failed to create order", http.StatusInternalServerError)
+		return
+	}
+	
+	// Insert order items
+	itemQuery := `
+		INSERT INTO order_items (order_id, product_id, product_name, quantity, price)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+	
+	for _, item := range newOrder.Items {
+		_, err = tx.Exec(itemQuery, orderID, item.ProductID, item.Name, item.Quantity, item.Price)
+		if err != nil {
+			log.Printf("Failed to insert order item: %v", err)
+			http.Error(w, "Failed to create order", http.StatusInternalServerError)
+			return
+		}
+	}
+	
+	// Commit the transaction
+	if err = tx.Commit(); err != nil {
+		log.Printf("Failed to commit transaction: %v", err)
+		http.Error(w, "Failed to create order", http.StatusInternalServerError)
+		return
+	}
+	
+	// Create response order object
 	order := Order{
-		ID:           nextOrderID,
-		Timestamp:    time.Now().Format("2006-01-02 15:04:05"),
+		ID:           orderID,
+		UserID:       newOrder.UserID,
+		Timestamp:    orderedAt.Format("2006-01-02 15:04:05"),
+		OrderedAt:    orderedAt,
 		Items:        newOrder.Items,
 		TotalAmount:  calculatedTotal,
 		ShippingInfo: newOrder.ShippingInfo,
 	}
 	
-	// Add to orders slice and increment ID counter
-	orders = append(orders, order)
-	nextOrderID++
+	// Set order ID for each item in response
+	for i := range order.Items {
+		order.Items[i].OrderID = orderID
+		order.Items[i].ID = i + 1 // Simple indexing for response
+	}
 	
-	log.Printf("New order created: ID=%d, Total=%.2f, Items=%d", order.ID, order.TotalAmount, len(order.Items))
+	log.Printf("New order created in database: ID=%d, Total=%.2f, Items=%d", orderID, calculatedTotal, len(newOrder.Items))
 	
 	// Return the created order
 	w.Header().Set("Content-Type", "application/json")
@@ -637,24 +705,99 @@ func createOrderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// getOrdersHandler handles GET /api/orders - returns all orders sorted by timestamp descending
+// getOrdersHandler handles GET /api/orders - returns all orders from database sorted by timestamp descending
 func getOrdersHandler(w http.ResponseWriter, r *http.Request) {
-	// Create a copy of orders slice for sorting
-	sortedOrders := make([]Order, len(orders))
-	copy(sortedOrders, orders)
+	// Query to get all orders with their items
+	orderQuery := `
+		SELECT o.id, o.user_id, o.total_amount, o.ordered_at, 
+		       o.shipping_name, o.shipping_address, o.shipping_phone_number, o.shipping_email
+		FROM orders o
+		ORDER BY o.ordered_at DESC
+	`
 	
-	// Sort orders by timestamp descending (newest first)
-	for i := 0; i < len(sortedOrders)-1; i++ {
-		for j := i + 1; j < len(sortedOrders); j++ {
-			// Compare timestamps (assuming format "2006-01-02 15:04:05")
-			if sortedOrders[i].Timestamp < sortedOrders[j].Timestamp {
-				sortedOrders[i], sortedOrders[j] = sortedOrders[j], sortedOrders[i]
+	rows, err := db.Query(orderQuery)
+	if err != nil {
+		log.Printf("Failed to query orders: %v", err)
+		http.Error(w, "Failed to fetch orders", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	
+	var orders []Order
+	orderMap := make(map[int]*Order) // To efficiently group items by order
+	
+	for rows.Next() {
+		var order Order
+		var shippingEmail string
+		
+		err := rows.Scan(&order.ID, &order.UserID, &order.TotalAmount, &order.OrderedAt,
+			&order.ShippingInfo.Name, &order.ShippingInfo.Address, 
+			&order.ShippingInfo.PhoneNumber, &shippingEmail)
+		if err != nil {
+			log.Printf("Failed to scan order: %v", err)
+			http.Error(w, "Failed to parse orders", http.StatusInternalServerError)
+			return
+		}
+		
+		// Format timestamp for frontend compatibility
+		order.Timestamp = order.OrderedAt.Format("2006-01-02 15:04:05")
+		order.Items = []OrderItem{} // Initialize empty items slice
+		
+		orders = append(orders, order)
+		orderMap[order.ID] = &orders[len(orders)-1] // Reference to the order in slice
+	}
+	
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating orders: %v", err)
+		http.Error(w, "Failed to fetch orders", http.StatusInternalServerError)
+		return
+	}
+	
+	// Now fetch all order items and group them by order
+	if len(orders) > 0 {
+		itemQuery := `
+			SELECT oi.id, oi.order_id, oi.product_id, oi.product_name, oi.quantity, oi.price
+			FROM order_items oi
+			ORDER BY oi.order_id, oi.id
+		`
+		
+		itemRows, err := db.Query(itemQuery)
+		if err != nil {
+			log.Printf("Failed to query order items: %v", err)
+			http.Error(w, "Failed to fetch order items", http.StatusInternalServerError)
+			return
+		}
+		defer itemRows.Close()
+		
+		for itemRows.Next() {
+			var item OrderItem
+			
+			err := itemRows.Scan(&item.ID, &item.OrderID, &item.ProductID, 
+				&item.Name, &item.Quantity, &item.Price)
+			if err != nil {
+				log.Printf("Failed to scan order item: %v", err)
+				http.Error(w, "Failed to parse order items", http.StatusInternalServerError)
+				return
 			}
+			
+			// Calculate subtotal
+			item.Subtotal = item.Price * float64(item.Quantity)
+			
+			// Add item to corresponding order
+			if order, exists := orderMap[item.OrderID]; exists {
+				order.Items = append(order.Items, item)
+			}
+		}
+		
+		if err = itemRows.Err(); err != nil {
+			log.Printf("Error iterating order items: %v", err)
+			http.Error(w, "Failed to fetch order items", http.StatusInternalServerError)
+			return
 		}
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(sortedOrders); err != nil {
+	if err := json.NewEncoder(w).Encode(orders); err != nil {
 		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode orders data", http.StatusInternalServerError)
 		return

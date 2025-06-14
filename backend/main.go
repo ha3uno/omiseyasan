@@ -403,20 +403,34 @@ func runMigrations() {
 		log.Fatal("DATABASE_URL environment variable is required for migrations")
 	}
 
+	// マイグレーションファイルのパスを構築（実行時のカレントディレクトリに依存しない絶対パス）
+	currentDir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get current working directory: %v", err)
+	}
+	
+	// backendディレクトリがカレントディレクトリの場合、プロジェクトルートは親ディレクトリ
+	projectRoot := filepath.Join(currentDir, "..")
+	migrationsPath := "file://" + filepath.Join(projectRoot, "migrations")
+	
+	log.Printf("Current directory: %s", currentDir)
+	log.Printf("Project root: %s", projectRoot)
+	log.Printf("Migrations path: %s", migrationsPath)
+
 	// Create postgres driver instance
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		log.Fatal("Failed to create postgres driver for migrations:", err)
+		log.Fatalf("Failed to create postgres driver for migrations: %v", err)
 	}
 
-	// Create migrate instance with file source
+	// Create migrate instance with file source using absolute path
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://../migrations", // Source: migrations directory relative to backend directory
-		"postgres", // Database name
-		driver,     // Database driver instance
+		migrationsPath, // Source: absolute path to migrations directory
+		"postgres",     // Database name
+		driver,         // Database driver instance
 	)
 	if err != nil {
-		log.Fatal("Failed to create migrate instance:", err)
+		log.Fatalf("Failed to create migrate instance with path '%s': %v", migrationsPath, err)
 	}
 
 	// Run up migrations
@@ -425,7 +439,7 @@ func runMigrations() {
 		if err == migrate.ErrNoChange {
 			log.Println("Database schema is up to date")
 		} else {
-			log.Fatal("Failed to run migrations:", err)
+			log.Fatalf("Failed to run migrations: %v", err)
 		}
 	} else {
 		log.Println("Database migrations applied successfully")

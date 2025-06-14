@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -405,17 +406,21 @@ func runMigrations() {
 		log.Fatal("DATABASE_URL environment variable is required for migrations")
 	}
 
-	// マイグレーションファイルのパスを構築（実行時のカレントディレクトリに依存しない絶対パス）
-	currentDir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Failed to get current working directory: %v", err)
+	// main.go自身のファイルパスを取得（デプロイ環境で確実にパスを特定）
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatalf("Failed to get caller information for main.go")
 	}
 	
-	// backendディレクトリがカレントディレクトリの場合、プロジェクトルートは親ディレクトリ
-	projectRoot := filepath.Join(currentDir, "..")
+	// main.goのディレクトリ (backend/)
+	currentFileDir := filepath.Dir(filename)
+	// プロジェクトルート (backend/の親ディレクトリ)
+	projectRoot := filepath.Dir(currentFileDir)
+	// マイグレーションディレクトリの絶対パス
 	migrationsPath := "file://" + filepath.Join(projectRoot, "migrations")
 	
-	log.Printf("Current directory: %s", currentDir)
+	log.Printf("main.go file path: %s", filename)
+	log.Printf("backend directory: %s", currentFileDir)
 	log.Printf("Project root: %s", projectRoot)
 	log.Printf("Migrations path: %s", migrationsPath)
 

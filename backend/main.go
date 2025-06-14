@@ -40,6 +40,7 @@ type User struct {
 	Address     string `json:"address"`
 	PhoneNumber string `json:"phoneNumber"`
 	Email       string `json:"email"`
+	Password    string `json:"password"`
 }
 
 // OrderItem represents an item in an order
@@ -170,6 +171,7 @@ func main() {
 	api.HandleFunc("/products", getProductsHandler).Methods("GET")
 	api.HandleFunc("/products/{id}", getProductByIDHandler).Methods("GET")
 	api.HandleFunc("/users/register", registerUserHandler).Methods("POST")
+	api.HandleFunc("/users/login", loginUserHandler).Methods("POST")
 	api.HandleFunc("/orders", createOrderHandler).Methods("POST")
 	api.HandleFunc("/orders", getOrdersHandler).Methods("GET")
 
@@ -264,6 +266,7 @@ func registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		Address     string `json:"address"`
 		PhoneNumber string `json:"phoneNumber"`
 		Email       string `json:"email"`
+		Password    string `json:"password"`
 	}
 	
 	if err := json.NewDecoder(r.Body).Decode(&newUser); err != nil {
@@ -273,8 +276,8 @@ func registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Validate required fields
-	if newUser.Name == "" || newUser.Email == "" {
-		http.Error(w, "Name and email are required", http.StatusBadRequest)
+	if newUser.Name == "" || newUser.Email == "" || newUser.Password == "" {
+		http.Error(w, "Name, email, and password are required", http.StatusBadRequest)
 		return
 	}
 	
@@ -285,20 +288,86 @@ func registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		Address:     newUser.Address,
 		PhoneNumber: newUser.PhoneNumber,
 		Email:       newUser.Email,
+		Password:    newUser.Password,
 	}
 	
 	// Add to users slice and increment ID counter
 	users = append(users, user)
 	nextUserID++
 	
-	// Return the created user
+	// Return the created user (excluding password for security)
+	userResponse := struct {
+		ID          int    `json:"id"`
+		Name        string `json:"name"`
+		Address     string `json:"address"`
+		PhoneNumber string `json:"phoneNumber"`
+		Email       string `json:"email"`
+	}{
+		ID:          user.ID,
+		Name:        user.Name,
+		Address:     user.Address,
+		PhoneNumber: user.PhoneNumber,
+		Email:       user.Email,
+	}
+	
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(user); err != nil {
+	if err := json.NewEncoder(w).Encode(userResponse); err != nil {
 		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
+}
+
+// loginUserHandler handles POST /api/users/login - authenticates a user
+func loginUserHandler(w http.ResponseWriter, r *http.Request) {
+	var loginData struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
+		log.Printf("JSON decode error: %v", err)
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+	
+	// Validate required fields
+	if loginData.Email == "" || loginData.Password == "" {
+		http.Error(w, "Email and password are required", http.StatusBadRequest)
+		return
+	}
+	
+	// Search for user with matching email and password
+	for _, user := range users {
+		if user.Email == loginData.Email && user.Password == loginData.Password {
+			// User found - return user data (excluding password for security)
+			userResponse := struct {
+				ID          int    `json:"id"`
+				Name        string `json:"name"`
+				Address     string `json:"address"`
+				PhoneNumber string `json:"phoneNumber"`
+				Email       string `json:"email"`
+			}{
+				ID:          user.ID,
+				Name:        user.Name,
+				Address:     user.Address,
+				PhoneNumber: user.PhoneNumber,
+				Email:       user.Email,
+			}
+			
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(userResponse); err != nil {
+				log.Printf("JSON encoding error: %v", err)
+				http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+	}
+	
+	// User not found or invalid credentials
+	http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 }
 
 // initDB initializes the database connection

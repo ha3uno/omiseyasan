@@ -7,6 +7,7 @@ interface UserRegistrationForm {
   address: string;
   phoneNumber: string;
   email: string;
+  password: string;
 }
 
 function UserRegisterPage() {
@@ -14,7 +15,8 @@ function UserRegisterPage() {
     name: '',
     address: '',
     phoneNumber: '',
-    email: ''
+    email: '',
+    password: ''
   });
   
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -33,8 +35,8 @@ function UserRegisterPage() {
     e.preventDefault();
     
     // Basic validation
-    if (!formData.name.trim() || !formData.email.trim()) {
-      setError('お名前とメールアドレスは必須項目です。');
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
+      setError('お名前、メールアドレス、パスワードは必須項目です。');
       return;
     }
 
@@ -64,7 +66,8 @@ function UserRegisterPage() {
         name: '',
         address: '',
         phoneNumber: '',
-        email: ''
+        email: '',
+        password: ''
       });
       setSuccess(true);
 
@@ -150,6 +153,19 @@ function UserRegisterPage() {
                 />
               </div>
 
+              <div className="form-group">
+                <label htmlFor="password">パスワード *</label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="パスワードを入力してください"
+                  required
+                />
+              </div>
+
               {error && <p className="form-error">{error}</p>}
 
               <button 
@@ -161,6 +177,11 @@ function UserRegisterPage() {
               </button>
             </form>
           )}
+          
+          <div className="register-links">
+            <p>既にアカウントをお持ちの方は</p>
+            <Link to="/login" className="nav-link">ログイン</Link>
+          </div>
           
           <div className="navigation-links">
             <Link to="/" className="nav-link">← ホームに戻る</Link>

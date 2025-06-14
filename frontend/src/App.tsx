@@ -11,7 +11,23 @@ interface Product {
   imageUrl: string;
 }
 
-function App() {
+interface User {
+  id: number;
+  name: string;
+  address: string;
+  phoneNumber: string;
+  email: string;
+}
+
+const USER_STORAGE_KEY = 'omiseyasan-user';
+
+interface AppProps {
+  loggedInUser: User | null;
+  onLogin: (user: User) => void;
+  onLogout: () => void;
+}
+
+function App({ loggedInUser, onLogin, onLogout }: AppProps) {
   const { getTotalQuantity } = useCart();
   const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
@@ -122,6 +138,7 @@ function App() {
     }));
   };
 
+
   return (
     <div className="App">
       <header className="App-header">
@@ -134,9 +151,25 @@ function App() {
           <Link to="/order-history" className="nav-link">
             📋 注文履歴
           </Link>
-          <Link to="/register" className="nav-link">
-            👤 アカウント登録
-          </Link>
+          {loggedInUser ? (
+            <>
+              <Link to="/my-account" className="nav-link">
+                👤 {loggedInUser.name}さん
+              </Link>
+              <button onClick={onLogout} className="nav-link logout-btn">
+                🚪 ログアウト
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="nav-link">
+                🔑 ログイン
+              </Link>
+              <Link to="/register" className="nav-link">
+                👤 アカウント登録
+              </Link>
+            </>
+          )}
           <Link to="/history" className="nav-link">
             📝 更新履歴
           </Link>

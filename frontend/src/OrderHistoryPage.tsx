@@ -95,7 +95,14 @@ function OrderHistoryPage() {
       
       <main>
         <div className="order-history-container">
-          <h2>注文履歴</h2>
+          {/* ページヘッダーに新規登録ボタンを追加 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+            <h2>注文履歴・更新履歴</h2>
+            {/* 新規更新履歴登録ボタンを追加 */}
+            <Link to="/update-history/register" className="action-btn primary">
+              ➕ 新規更新履歴を登録
+            </Link>
+          </div>
           
           {loading && <p className="loading">注文履歴を読み込み中...</p>}
           {error && (
@@ -109,7 +116,13 @@ function OrderHistoryPage() {
             <div className="empty-history">
               <h3>注文履歴がありません</h3>
               <p>まだ注文されていません。お気に入りの商品を見つけてお買い物をお楽しみください。</p>
-              <Link to="/" className="nav-link">商品を見る</Link>
+              <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '20px' }}>
+                <Link to="/" className="nav-link">商品を見る</Link>
+                {/* 空の履歴でも更新履歴登録へのリンクを表示 */}
+                <Link to="/update-history/register" className="action-btn primary">
+                  更新履歴を登録
+                </Link>
+              </div>
             </div>
           )}
           
@@ -180,6 +193,8 @@ function OrderHistoryPage() {
           <div className="navigation-links">
             <Link to="/" className="nav-link">← ホームに戻る</Link>
             <Link to="/cart" className="nav-link">カートを見る →</Link>
+            {/* 新規更新履歴登録への追加リンク */}
+            <Link to="/update-history/register" className="nav-link">新規更新履歴を登録 →</Link>
           </div>
         </div>
       </main>

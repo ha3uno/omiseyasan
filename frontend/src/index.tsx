@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css';
 import App from './App';
 import HistoryPage from './HistoryPage';
-import UpdateHistoryListPage from './UpdateHistoryListPage';
+// import UpdateHistoryListPage from './UpdateHistoryListPage'; // 存在しないファイルのため削除
 import UpdateHistoryRegisterPage from './UpdateHistoryRegisterPage';
 import ProductDetailPage from './ProductDetailPage';
 import UserRegisterPage from './UserRegisterPage';
@@ -68,7 +68,7 @@ function AppWithAuth() {
     <Routes>
       <Route path="/" element={<App loggedInUser={loggedInUser} onLogin={handleLogin} onLogout={handleLogout} />} />
       <Route path="/history" element={<HistoryPage />} />
-      <Route path="/update-history" element={<UpdateHistoryListPage />} />
+      <Route path="/update-history" element={<OrderHistoryPage />} /> {/* 修正: OrderHistoryPageを使用 */}
       <Route path="/update-history/register" element={<UpdateHistoryRegisterPage />} />
       <Route path="/products/:id" element={<ProductDetailPage />} />
       <Route path="/register" element={<UserRegisterPage />} />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from './CartContext';
 import './App.css';
@@ -17,7 +17,21 @@ interface OrderItem {
   subtotal: number;
 }
 
-function OrderConfirmationPage() {
+// ユーザー情報のインターフェースを追加
+interface User {
+  id: number;
+  name: string;
+  address: string;
+  phoneNumber: string;
+  email: string;
+}
+
+// プロップスのインターフェースを追加
+interface OrderConfirmationPageProps {
+  loggedInUser: User | null;
+}
+
+function OrderConfirmationPage({ loggedInUser }: OrderConfirmationPageProps) {
   const navigate = useNavigate();
   const { cartItems, getTotalPrice, clearCart } = useCart();
   
@@ -29,6 +43,17 @@ function OrderConfirmationPage() {
   
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+
+  // ログイン中のユーザー情報を配送先フォームの初期値に設定
+  useEffect(() => {
+    if (loggedInUser) {
+      setShippingInfo({
+        name: loggedInUser.name || '',
+        address: loggedInUser.address || '',
+        phoneNumber: loggedInUser.phoneNumber || ''
+      });
+    }
+  }, [loggedInUser]);
 
   // If cart is empty, redirect to home
   if (cartItems.length === 0) {
@@ -135,6 +160,34 @@ function OrderConfirmationPage() {
       <main>
         <div className="order-container">
           <h2>注文確認</h2>
+          
+          {/* ログイン状況の表示を追加 */}
+          {loggedInUser ? (
+            <div className="user-info-notice" style={{ 
+              background: '#c6f6d5', 
+              padding: '15px', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              <p style={{ margin: 0, color: '#22543d' }}>
+                ✅ {loggedInUser.name}さんとしてログイン中です。配送先情報が自動入力されています。
+              </p>
+            </div>
+          ) : (
+            <div className="user-info-notice" style={{ 
+              background: '#fed7d7', 
+              padding: '15px', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              <p style={{ margin: 0, color: '#c53030' }}>
+                ℹ️ ログインしていません。配送先情報を手動で入力してください。
+                <Link to="/login" style={{ marginLeft: '10px', color: '#3182ce' }}>ログイン →</Link>
+              </p>
+            </div>
+          )}
           
           {/* Order Summary */}
           <div className="order-summary">

@@ -73,7 +73,8 @@ function AppWithAuth() {
       <Route path="/products/:id" element={<ProductDetailPage />} />
       <Route path="/register" element={<UserRegisterPage />} />
       <Route path="/cart" element={<CartPage />} />
-      <Route path="/order" element={<OrderConfirmationPage />} />
+      {/* 修正: OrderConfirmationPageにloggedInUserプロップスを渡す */}
+      <Route path="/order" element={<OrderConfirmationPage loggedInUser={loggedInUser} />} />
       <Route path="/payment-complete" element={<PaymentCompletePage />} />
       <Route path="/order-history" element={<OrderHistoryPage />} />
       <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />

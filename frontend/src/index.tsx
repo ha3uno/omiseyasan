@@ -68,7 +68,7 @@ function AppWithAuth() {
     <Routes>
       <Route path="/" element={<App loggedInUser={loggedInUser} onLogin={handleLogin} onLogout={handleLogout} />} />
       <Route path="/history" element={<HistoryPage />} />
-      <Route path="/update-history" element={<OrderHistoryPage />} /> {/* 修正: OrderHistoryPageを使用 */}
+      <Route path="/update-history" element={<HistoryPage />} /> {/* 修正: HistoryPageを使用 */}
       <Route path="/update-history/register" element={<UpdateHistoryRegisterPage />} />
       <Route path="/products/:id" element={<ProductDetailPage />} />
       <Route path="/register" element={<UserRegisterPage />} />

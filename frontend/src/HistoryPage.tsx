@@ -184,7 +184,6 @@ const HistoryPage: React.FC = () => {
         <nav className="header-nav">
           <Link to="/" className="nav-link">🏠 ホーム</Link>
           <Link to="/cart" className="nav-link">🛒 カート ({getTotalQuantity()})</Link>
-          <Link to="/order-history" className="nav-link">📋 注文履歴</Link>
         </nav>
       </header>
 

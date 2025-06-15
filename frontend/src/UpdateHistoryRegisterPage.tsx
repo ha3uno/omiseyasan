@@ -57,9 +57,9 @@ function UpdateHistoryRegisterPage() {
       });
       setHistorySuccess(true);
       
-      // 2秒後に /order-history へリダイレクト
+      // 2秒後に /update-history へリダイレクト
       setTimeout(() => {
-        navigate('/order-history');
+        navigate('/update-history');
       }, 2000);
 
     } catch (err) {
@@ -85,7 +85,8 @@ function UpdateHistoryRegisterPage() {
         <nav className="header-nav">
           <Link to="/" className="nav-link">🏠 ホーム</Link>
           <Link to="/cart" className="nav-link">🛒 カート ({getTotalQuantity()})</Link>
-          <Link to="/order-history" className="nav-link">📋 履歴一覧</Link>
+          <Link to="/update-history" className="nav-link">📋 更新履歴</Link>
+          <Link to="/order-history" className="nav-link">🛍️ 注文履歴</Link>
         </nav>
       </header>
       
@@ -97,7 +98,7 @@ function UpdateHistoryRegisterPage() {
           {/* 成功メッセージ */}
           {historySuccess && (
             <div className="form-success">
-              ✅ 更新履歴が正常に登録されました！履歴一覧ページにリダイレクトします...
+              ✅ 更新履歴が正常に登録されました！更新履歴ページにリダイレクトします...
             </div>
           )}
           
@@ -157,8 +158,8 @@ function UpdateHistoryRegisterPage() {
                 {historySubmitting ? '登録中...' : '📝 履歴を登録'}
               </button>
               
-              <Link to="/order-history" className="action-btn secondary">
-                ← 一覧に戻る
+              <Link to="/update-history" className="action-btn secondary">
+                ← 更新履歴一覧に戻る
               </Link>
             </div>
           </form>

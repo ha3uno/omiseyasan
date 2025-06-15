@@ -183,7 +183,7 @@ function App({ loggedInUser, onLogin, onLogout }: AppProps) {
           </div>
           
           <div className="footer-section">
-            <h4>アカウント</h4>
+            <h4>サポート</h4>
             <ul>
               <li><Link to="/register">アカウント登録</Link></li>
               <li><Link to="/update-history">更新履歴</Link></li>

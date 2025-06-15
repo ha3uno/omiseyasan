@@ -88,8 +88,7 @@ function OrderHistoryPage() {
         <nav className="header-nav">
           <Link to="/" className="nav-link">🏠 ホーム</Link>
           <Link to="/cart" className="nav-link">🛒 カート ({getTotalQuantity()})</Link>
-          <Link to="/register" className="nav-link">👤 アカウント登録</Link>
-          <Link to="/history" className="nav-link">📝 更新履歴</Link>
+          <Link to="/update-history" className="nav-link">📝 更新履歴</Link>
         </nav>
       </header>
       

@@ -38,8 +38,8 @@ function CartPage() {
         <h1>おみせやさん♪</h1>
         <nav className="header-nav">
           <Link to="/" className="nav-link">🏠 ホーム</Link>
-          <Link to="/register" className="nav-link">👤 アカウント登録</Link>
-          <Link to="/history" className="nav-link">📝 更新履歴</Link>
+          <Link to="/order-history" className="nav-link">📋 注文履歴</Link>
+          <Link to="/update-history" className="nav-link">📝 更新履歴</Link>
         </nav>
       </header>
       

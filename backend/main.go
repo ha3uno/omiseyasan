@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"backend/data"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -28,14 +29,8 @@ type HistoryEntry struct {
 	ClaudePrompt string `json:"claudePrompt"`
 }
 
-// Product represents a product in the e-commerce site
-type Product struct {
-	ID          int     `json:"id"`
-	Name        string  `json:"name"`
-	Price       float64 `json:"price"`
-	Description string  `json:"description"`
-	ImageURL    string  `json:"imageUrl"`
-}
+// Use Product type from data package
+type Product = data.Product
 
 // User represents a user account
 type User struct {
@@ -84,80 +79,7 @@ var users = []User{}
 var nextUserID = 1
 
 // Note: Order storage is now handled by PostgreSQL database
-
-// Sample product data - hardcoded in memory with Picsum Photos images
-var products = []Product{
-	{
-		ID:          1,
-		Name:        "モダンアートフレーム",
-		Price:       3980,
-		Description: "お部屋を彩るスタイリッシュなアートフレーム。モダンなデザインでどんなインテリアにも合います。",
-		ImageURL:    "https://picsum.photos/300/300?random=1",
-	},
-	{
-		ID:          2,
-		Name:        "ナチュラルウッドテーブル",
-		Price:       12800,
-		Description: "天然木を使用したシンプルで美しいテーブル。温かみのある木目が特徴的です。",
-		ImageURL:    "https://picsum.photos/300/300?random=2",
-	},
-	{
-		ID:          3,
-		Name:        "ヴィンテージレザーバッグ",
-		Price:       8900,
-		Description: "上質なレザーを使用したヴィンテージ風バッグ。使うほどに味が出てきます。",
-		ImageURL:    "https://picsum.photos/300/300?random=3",
-	},
-	{
-		ID:          4,
-		Name:        "セラミック花瓶",
-		Price:       2200,
-		Description: "手作りの温かみを感じるセラミック花瓶。お花を生けて空間を華やかに演出できます。",
-		ImageURL:    "https://picsum.photos/300/300?random=4",
-	},
-	{
-		ID:          5,
-		Name:        "オーガニックコットンクッション",
-		Price:       1680,
-		Description: "肌に優しいオーガニックコットン100%のクッション。ナチュラルな風合いが魅力です。",
-		ImageURL:    "https://picsum.photos/300/300?random=5",
-	},
-	{
-		ID:          6,
-		Name:        "アロマキャンドルセット",
-		Price:       2450,
-		Description: "リラックス効果の高い天然アロマを使用したキャンドルセット。癒しの時間をお届けします。",
-		ImageURL:    "https://picsum.photos/300/300?random=6",
-	},
-	{
-		ID:          7,
-		Name:        "ハンドメイドソープコレクション",
-		Price:       1890,
-		Description: "天然成分にこだわったハンドメイドソープのコレクション。お肌に優しく香りも豊かです。",
-		ImageURL:    "https://picsum.photos/300/300?random=7",
-	},
-	{
-		ID:          8,
-		Name:        "竹製キッチンツールセット",
-		Price:       3200,
-		Description: "環境に優しい竹素材のキッチンツールセット。軽くて丈夫、長くご愛用いただけます。",
-		ImageURL:    "https://picsum.photos/300/300?random=8",
-	},
-	{
-		ID:          9,
-		Name:        "ガラス製デキャンタ",
-		Price:       4650,
-		Description: "エレガントなフォルムのガラス製デキャンタ。ワインやウイスキーをより美味しく楽しめます。",
-		ImageURL:    "https://picsum.photos/300/300?random=9",
-	},
-	{
-		ID:          10,
-		Name:        "フェルト製収納ボックス",
-		Price:       1280,
-		Description: "柔らかなフェルト素材の収納ボックス。シンプルなデザインで様々な用途に使えます。",
-		ImageURL:    "https://picsum.photos/300/300?random=10",
-	},
-}
+// Products are now dynamically retrieved from data.GetProducts()
 
 func main() {
 	// Initialize database connection
@@ -253,6 +175,7 @@ func getProductByIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Find product by ID
+	products := data.GetProducts()
 	for _, product := range products {
 		if product.ID == id {
 			w.Header().Set("Content-Type", "application/json")
@@ -579,6 +502,7 @@ func createHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 // getProductsHandler handles GET /api/products - returns all products
 func getProductsHandler(w http.ResponseWriter, r *http.Request) {
+	products := data.GetProducts()
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(products); err != nil {
 		http.Error(w, "Failed to encode products data", http.StatusInternalServerError)

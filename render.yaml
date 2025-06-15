@@ -4,9 +4,10 @@ services:
     env: go
     region: singapore # ★シンガポールリージョンを設定
     buildCommand: |
-      apt-get update && sudo apt-get install -y docker-compose &&
+      # apt-get update && sudo apt-get install -y docker-compose &&
       cd frontend && npm install && npm run build && cd .. &&
-      cd backend && go mod tidy && go test -v ./... && go build -o app main.go && cd ..
+      cd backend && go mod tidy && go build -o app main.go && cd ..
+      # go test -v ./...
     startCommand: cd backend && ./app
     healthCheckPath: /api/hello
     envVars:

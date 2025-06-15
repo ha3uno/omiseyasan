@@ -40,10 +40,22 @@ func TestMain(m *testing.M) {
 func setupTestDB() {
 	log.Println("Setting up test database...")
 	
-	// Start PostgreSQL container using docker-compose (installed via render.yaml)
+	// Try to start PostgreSQL container using docker-compose first
 	cmd := exec.Command("docker-compose", "-f", "../docker-compose.test.yml", "up", "-d")
+	
+	// Capture command output for better error diagnosis
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
 	if err := cmd.Run(); err != nil {
-		log.Fatalf("Failed to start test database: %v", err)
+		log.Printf("Docker compose stdout: %s", stdout.String())
+		log.Printf("Docker compose stderr: %s", stderr.String())
+		log.Printf("Failed to start test database with Docker, trying local PostgreSQL: %v", err)
+		
+		// Fallback to local PostgreSQL
+		setupLocalTestDB()
+		return
 	}
 	
 	// Wait for PostgreSQL to be ready
@@ -58,8 +70,8 @@ func setupTestDB() {
 		}
 	}
 	
-	// Set environment variable for test database
-	os.Setenv("DATABASE_URL", "postgres://test_user:test_password@localhost/omiseyasan_test?sslmode=disable")
+	// Set environment variable for test database (using port 5433 to avoid conflicts)
+	os.Setenv("DATABASE_URL", "postgres://test_user:test_password@localhost:5433/omiseyasan_test?sslmode=disable")
 	
 	// Initialize database connection
 	initDB()
@@ -68,6 +80,44 @@ func setupTestDB() {
 	runTestMigrations()
 	
 	log.Println("Test database setup completed")
+}
+
+// setupLocalTestDB sets up local PostgreSQL for testing
+func setupLocalTestDB() {
+	log.Println("Setting up local PostgreSQL for testing...")
+	
+	// Start local PostgreSQL service
+	cmd := exec.Command("brew", "services", "start", "postgresql@14")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
+	if err := cmd.Run(); err != nil {
+		log.Printf("Brew services stdout: %s", stdout.String())
+		log.Printf("Brew services stderr: %s", stderr.String())
+		log.Printf("Warning: Failed to start PostgreSQL service: %v", err)
+	}
+	
+	// Wait for PostgreSQL to be ready
+	log.Println("Waiting for local PostgreSQL to be ready...")
+	time.Sleep(3 * time.Second)
+	
+	// Create test database and user
+	createTestDBCmd := exec.Command("createdb", "-h", "localhost", "omiseyasan_test")
+	if err := createTestDBCmd.Run(); err != nil {
+		log.Printf("Warning: Failed to create test database (may already exist): %v", err)
+	}
+	
+	// Set environment variable for test database (local PostgreSQL on default port)
+	os.Setenv("DATABASE_URL", "postgres://hal:@localhost/omiseyasan_test?sslmode=disable")
+	
+	// Initialize database connection
+	initDB()
+	
+	// Run migrations
+	runTestMigrations()
+	
+	log.Println("Local test database setup completed")
 }
 
 // teardownTestDB stops PostgreSQL container
@@ -81,8 +131,18 @@ func teardownTestDB() {
 	
 	// Stop PostgreSQL container using docker-compose (installed via render.yaml)
 	cmd := exec.Command("docker-compose", "-f", "../docker-compose.test.yml", "down")
+	
+	// Capture command output for better error diagnosis
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
 	if err := cmd.Run(); err != nil {
+		log.Printf("Docker compose down stdout: %s", stdout.String())
+		log.Printf("Docker compose down stderr: %s", stderr.String())
 		log.Printf("Warning: Failed to stop test database: %v", err)
+	} else {
+		log.Println("Docker compose down completed successfully")
 	}
 	
 	log.Println("Test database teardown completed")
@@ -90,13 +150,29 @@ func teardownTestDB() {
 
 // checkDBConnection checks if PostgreSQL is ready to accept connections
 func checkDBConnection() bool {
-	testDB, err := sql.Open("postgres", "postgres://test_user:test_password@localhost/omiseyasan_test?sslmode=disable")
+	// Try Docker PostgreSQL first (port 5433)
+	testDB, err := sql.Open("postgres", "postgres://test_user:test_password@localhost:5433/omiseyasan_test?sslmode=disable")
+	if err == nil {
+		defer testDB.Close()
+		if testDB.Ping() == nil {
+			return true
+		}
+	}
+	
+	// Fallback to local PostgreSQL (default port)
+	testDB, err = sql.Open("postgres", "postgres://hal:@localhost/omiseyasan_test?sslmode=disable")
 	if err != nil {
+		log.Printf("Failed to open local test DB connection: %v", err)
 		return false
 	}
 	defer testDB.Close()
 	
-	return testDB.Ping() == nil
+	if err := testDB.Ping(); err != nil {
+		log.Printf("Failed to ping local test DB: %v", err)
+		return false
+	}
+	
+	return true
 }
 
 // runTestMigrations runs database migrations for test database
@@ -113,6 +189,11 @@ func runTestMigrations() {
 	currentFileDir := filepath.Dir(filename)
 	projectRoot := filepath.Dir(currentFileDir)
 	migrationsPath := "file://" + filepath.Join(projectRoot, "migrations")
+	
+	log.Printf("Current file: %s", filename)
+	log.Printf("Current file dir: %s", currentFileDir)
+	log.Printf("Project root: %s", projectRoot)
+	log.Printf("Migrations path: %s", migrationsPath)
 	
 	// Create postgres driver instance
 	driver, err := postgres.WithInstance(db, &postgres.Config{})

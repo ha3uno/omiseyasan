@@ -40,8 +40,8 @@ func TestMain(m *testing.M) {
 func setupTestDB() {
 	log.Println("Setting up test database...")
 	
-	// Start PostgreSQL container using docker compose (space-separated for Render compatibility)
-	cmd := exec.Command("docker", "compose", "-f", "../docker-compose.test.yml", "up", "-d")
+	// Start PostgreSQL container using docker-compose (installed via render.yaml)
+	cmd := exec.Command("docker-compose", "-f", "../docker-compose.test.yml", "up", "-d")
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("Failed to start test database: %v", err)
 	}
@@ -79,8 +79,8 @@ func teardownTestDB() {
 		db.Close()
 	}
 	
-	// Stop PostgreSQL container using docker compose (space-separated for Render compatibility)
-	cmd := exec.Command("docker", "compose", "-f", "../docker-compose.test.yml", "down")
+	// Stop PostgreSQL container using docker-compose (installed via render.yaml)
+	cmd := exec.Command("docker-compose", "-f", "../docker-compose.test.yml", "down")
 	if err := cmd.Run(); err != nil {
 		log.Printf("Warning: Failed to stop test database: %v", err)
 	}

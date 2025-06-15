@@ -9,6 +9,7 @@ interface Product {
   price: number;
   description: string;
   imageUrl: string;
+  category: string;
 }
 
 interface User {
@@ -37,12 +38,24 @@ function App({ loggedInUser, onLogin, onLogout }: AppProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState<boolean>(true);
   const [productsError, setProductsError] = useState<string>('');
+  
+  // Categories and filtering state
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
 
   useEffect(() => {
     fetchMessage();
     fetchProducts();
+    fetchCategories();
   }, []);
+  
+  // Filter products when products, category, or search changes
+  useEffect(() => {
+    applyFilters();
+  }, [products, selectedCategory, searchQuery]);
 
   const fetchMessage = async () => {
     try {
@@ -76,6 +89,48 @@ function App({ loggedInUser, onLogin, onLogout }: AppProps) {
     } finally {
       setProductsLoading(false);
     }
+  };
+  
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setCategories(data);
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
+  
+  const applyFilters = () => {
+    let filtered = products;
+    
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query)
+      );
+    }
+    
+    setFilteredProducts(filtered);
+  };
+  
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+  };
+  
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
   };
 
 
@@ -118,35 +173,92 @@ function App({ loggedInUser, onLogin, onLogout }: AppProps) {
       </header>
       
       <main>
-        {/* Products Section */}
-        <section className="products-section">
-          <h2>おすすめ商品</h2>
-          {productsLoading && <p className="loading">商品を読み込み中...</p>}
-          {productsError && <p className="error">エラー: {productsError}</p>}
-          
-          {!productsLoading && !productsError && (
-            <div className="products-grid">
-              {products.map((product) => (
-                <Link
-                  key={product.id}
-                  to={`/products/${product.id}`}
-                  className="product-card"
-                >
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="product-image"
-                  />
-                  <div className="product-info">
-                    <h3 className="product-name">{product.name}</h3>
-                    <p className="product-price">¥{product.price.toLocaleString()}</p>
-                    <p className="product-description">{product.description}</p>
-                  </div>
-                </Link>
-              ))}
+        <div className="main-content">
+          {/* Sidebar */}
+          <aside className="sidebar">
+            <div className="search-section">
+              <h3>商品検索</h3>
+              <input
+                type="text"
+                placeholder="商品名やカテゴリで検索..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="search-input"
+              />
             </div>
-          )}
-        </section>
+            
+            <div className="categories-section">
+              <h3>カテゴリ</h3>
+              <div className="category-list">
+                <button
+                  className={`category-item ${selectedCategory === 'all' ? 'active' : ''}`}
+                  onClick={() => handleCategoryChange('all')}
+                >
+                  すべて ({products.length})
+                </button>
+                {categories.map((category) => {
+                  const count = products.filter(p => p.category === category).length;
+                  return (
+                    <button
+                      key={category}
+                      className={`category-item ${selectedCategory === category ? 'active' : ''}`}
+                      onClick={() => handleCategoryChange(category)}
+                    >
+                      {category} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+          
+          {/* Products Section */}
+          <section className="products-section">
+            <div className="products-header">
+              <h2>
+                {selectedCategory === 'all' ? 'すべての商品' : selectedCategory}
+                {searchQuery && ` - 「${searchQuery}」の検索結果`}
+              </h2>
+              <p className="products-count">{filteredProducts.length}件の商品</p>
+            </div>
+            
+            {productsLoading && <p className="loading">商品を読み込み中...</p>}
+            {productsError && <p className="error">エラー: {productsError}</p>}
+            
+            {!productsLoading && !productsError && (
+              <>
+                {filteredProducts.length === 0 ? (
+                  <div className="no-products">
+                    <p>条件に一致する商品が見つかりませんでした。</p>
+                    <button onClick={() => { setSelectedCategory('all'); setSearchQuery(''); }}>すべての商品を表示</button>
+                  </div>
+                ) : (
+                  <div className="products-grid">
+                    {filteredProducts.map((product) => (
+                      <Link
+                        key={product.id}
+                        to={`/products/${product.id}`}
+                        className="product-card"
+                      >
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="product-image"
+                        />
+                        <div className="product-info">
+                          <span className="product-category">{product.category}</span>
+                          <h3 className="product-name">{product.name}</h3>
+                          <p className="product-price">¥{product.price.toLocaleString()}</p>
+                          <p className="product-description">{product.description}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        </div>
 
         {/* Debug Section - Keep the original hello message for debugging */}
         <section className="debug-section">

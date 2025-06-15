@@ -9,6 +9,7 @@ interface Product {
   price: number;
   description: string;
   imageUrl: string;
+  category: string;
 }
 
 function ProductDetailPage() {
@@ -139,6 +140,7 @@ function ProductDetailPage() {
             </div>
             
             <div className="product-detail-info">
+              <span className="product-detail-category">{product.category}</span>
               <h2 className="product-detail-name">{product.name}</h2>
               <p className="product-detail-price">¥{product.price.toLocaleString()}</p>
               <p className="product-detail-description">{product.description}</p>

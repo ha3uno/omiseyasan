@@ -2,11 +2,12 @@ package data
 
 // Product represents a product in the e-commerce site
 type Product struct {
-	ID          int     `json:"id"`
-	Name        string  `json:"name"`
-	Price       float64 `json:"price"`
-	Description string  `json:"description"`
-	ImageURL    string  `json:"imageUrl"`
+	ID          int     `json:"id" db:"id"`
+	Name        string  `json:"name" db:"name"`
+	Price       float64 `json:"price" db:"price"`
+	Description string  `json:"description" db:"description"`
+	ImageURL    string  `json:"imageUrl" db:"image_url"`
+	Category    string  `json:"category" db:"category"`
 }
 
 // GetProducts returns a comprehensive list of products with high-quality images

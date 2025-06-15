@@ -101,6 +101,7 @@ func main() {
 	api.HandleFunc("/history", createHistoryHandler).Methods("POST")
 	api.HandleFunc("/products", getProductsHandler).Methods("GET")
 	api.HandleFunc("/products/{id}", getProductByIDHandler).Methods("GET")
+	api.HandleFunc("/categories", getCategoriesHandler).Methods("GET")
 	api.HandleFunc("/users/register", registerUserHandler).Methods("POST")
 	api.HandleFunc("/users/login", loginUserHandler).Methods("POST")
 	api.HandleFunc("/orders", createOrderHandler).Methods("POST")
@@ -174,21 +175,62 @@ func getProductByIDHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	
-	// Find product by ID
-	products := data.GetProducts()
-	for _, product := range products {
-		if product.ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(product); err != nil {
-				http.Error(w, "Failed to encode product data", http.StatusInternalServerError)
-				return
-			}
+	// Find product by ID from database
+	query := "SELECT id, name, price, description, image_url, category FROM products WHERE id = $1"
+	var product Product
+	err := db.QueryRow(query, id).Scan(&product.ID, &product.Name, &product.Price, &product.Description, &product.ImageURL, &product.Category)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Product not found", http.StatusNotFound)
 			return
 		}
+		log.Printf("Database query error: %v", err)
+		http.Error(w, "Failed to fetch product", http.StatusInternalServerError)
+		return
 	}
 	
-	// Product not found
-	http.Error(w, "Product not found", http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(product); err != nil {
+		http.Error(w, "Failed to encode product data", http.StatusInternalServerError)
+		return
+	}
+}
+
+// getCategoriesHandler handles GET /api/categories - returns all unique categories
+func getCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+	query := "SELECT DISTINCT category FROM products ORDER BY category"
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Printf("Database query error: %v", err)
+		http.Error(w, "Failed to fetch categories", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	
+	var categories []string
+	for rows.Next() {
+		var category string
+		err := rows.Scan(&category)
+		if err != nil {
+			log.Printf("Database scan error: %v", err)
+			http.Error(w, "Failed to parse categories", http.StatusInternalServerError)
+			return
+		}
+		categories = append(categories, category)
+	}
+	
+	if err = rows.Err(); err != nil {
+		log.Printf("Database rows error: %v", err)
+		http.Error(w, "Failed to fetch categories", http.StatusInternalServerError)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(categories); err != nil {
+		log.Printf("JSON encoding error: %v", err)
+		http.Error(w, "Failed to encode categories data", http.StatusInternalServerError)
+		return
+	}
 }
 
 // registerUserHandler handles POST /api/users/register - creates a new user account
@@ -500,11 +542,62 @@ func createHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// getProductsHandler handles GET /api/products - returns all products
+// getProductsHandler handles GET /api/products - returns all products with optional filtering
 func getProductsHandler(w http.ResponseWriter, r *http.Request) {
-	products := data.GetProducts()
+	// Parse query parameters
+	category := r.URL.Query().Get("category")
+	search := r.URL.Query().Get("search")
+	
+	// Build dynamic query
+	query := "SELECT id, name, price, description, image_url, category FROM products WHERE 1=1"
+	args := []interface{}{}
+	argIndex := 1
+	
+	if category != "" && category != "all" {
+		query += fmt.Sprintf(" AND category = $%d", argIndex)
+		args = append(args, category)
+		argIndex++
+	}
+	
+	if search != "" {
+		query += fmt.Sprintf(" AND (name ILIKE $%d OR category ILIKE $%d)", argIndex, argIndex+1)
+		searchPattern := "%" + search + "%"
+		args = append(args, searchPattern, searchPattern)
+		argIndex += 2
+	}
+	
+	query += " ORDER BY id"
+	
+	// Execute query
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		log.Printf("Database query error: %v", err)
+		http.Error(w, "Failed to fetch products", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	
+	var products []Product
+	for rows.Next() {
+		var product Product
+		err := rows.Scan(&product.ID, &product.Name, &product.Price, &product.Description, &product.ImageURL, &product.Category)
+		if err != nil {
+			log.Printf("Database scan error: %v", err)
+			http.Error(w, "Failed to parse products", http.StatusInternalServerError)
+			return
+		}
+		products = append(products, product)
+	}
+	
+	if err = rows.Err(); err != nil {
+		log.Printf("Database rows error: %v", err)
+		http.Error(w, "Failed to fetch products", http.StatusInternalServerError)
+		return
+	}
+	
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(products); err != nil {
+		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode products data", http.StatusInternalServerError)
 		return
 	}

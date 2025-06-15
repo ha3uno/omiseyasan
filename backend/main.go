@@ -76,7 +76,7 @@ type Order struct {
 	ShippingInfo ShippingInfo  `json:"shippingInfo"` // 個別のフィールドからマッピング
 }
 
-// Database connection
+// Database connection - exported for testing
 var db *sql.DB
 
 // In-memory user storage

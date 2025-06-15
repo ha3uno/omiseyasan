@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"backend/controllers"
 	"backend/database"
-	"backend/handlers"
+	"backend/repositories"
+	"backend/usecases"
 
 	"github.com/gorilla/mux"
 )
@@ -25,20 +27,40 @@ func main() {
 	// Create tables if they don't exist (fallback for existing code)
 	database.CreateTables()
 
+	// Initialize repositories
+	historyRepo := repositories.NewHistoryRepository(database.DB)
+	productRepo := repositories.NewProductRepository(database.DB)
+	userRepo := repositories.NewUserRepository()
+	orderRepo := repositories.NewOrderRepository(database.DB)
+
+	// Initialize usecases
+	historyUsecase := usecases.NewHistoryUsecase(historyRepo)
+	productUsecase := usecases.NewProductUsecase(productRepo)
+	userUsecase := usecases.NewUserUsecase(userRepo)
+	orderUsecase := usecases.NewOrderUsecase(orderRepo)
+
+	// Initialize controllers
+	controllers := controllers.NewControllers(
+		historyUsecase,
+		productUsecase,
+		userUsecase,
+		orderUsecase,
+	)
+
 	r := mux.NewRouter()
 
 	// API routes
 	api := r.PathPrefix("/api").Subrouter()
-	api.HandleFunc("/hello", handlers.HelloHandler).Methods("GET")
-	api.HandleFunc("/history", handlers.GetHistoryHandler).Methods("GET")
-	api.HandleFunc("/history", handlers.CreateHistoryHandler).Methods("POST")
-	api.HandleFunc("/products", handlers.GetProductsHandler).Methods("GET")
-	api.HandleFunc("/products/{id}", handlers.GetProductByIDHandler).Methods("GET")
-	api.HandleFunc("/categories", handlers.GetCategoriesHandler).Methods("GET")
-	api.HandleFunc("/users/register", handlers.RegisterUserHandler).Methods("POST")
-	api.HandleFunc("/users/login", handlers.LoginUserHandler).Methods("POST")
-	api.HandleFunc("/orders", handlers.CreateOrderHandler).Methods("POST")
-	api.HandleFunc("/orders", handlers.GetOrdersHandler).Methods("GET")
+	api.HandleFunc("/hello", controllers.HelloHandler).Methods("GET")
+	api.HandleFunc("/history", controllers.GetHistoryHandler).Methods("GET")
+	api.HandleFunc("/history", controllers.CreateHistoryHandler).Methods("POST")
+	api.HandleFunc("/products", controllers.GetProductsHandler).Methods("GET")
+	api.HandleFunc("/products/{id}", controllers.GetProductByIDHandler).Methods("GET")
+	api.HandleFunc("/categories", controllers.GetCategoriesHandler).Methods("GET")
+	api.HandleFunc("/users/register", controllers.RegisterUserHandler).Methods("POST")
+	api.HandleFunc("/users/login", controllers.LoginUserHandler).Methods("POST")
+	api.HandleFunc("/orders", controllers.CreateOrderHandler).Methods("POST")
+	api.HandleFunc("/orders", controllers.GetOrdersHandler).Methods("GET")
 
 	// Serve static files from frontend/build directory
 	staticDir := "../frontend/build"
